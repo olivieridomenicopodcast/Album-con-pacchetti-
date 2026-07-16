@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Buste</title>
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#150f0a">
+<script src="./theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#150f0a;
+    --leather:#2a1d14;
+    --leather-light:#3a2a1b;
+    --brass:#c9a24b;
+    --brass-bright:#e8c873;
+    --brass-dark:#8c6c2d;
+    --sleeve:rgba(255,255,255,0.045);
+    --sleeve-border:rgba(232,220,192,0.16);
+    --parchment:#e8dcc0;
+    --ink:#f1e9d8;
+    --ink-dim:#c9bda3;
+    --danger:#a24a3c;
+    --danger-bright:#c65e4e;
+  }
+  html[data-theme="light"]{
+    --void:#faf5ea;
+    --leather:#cdb98f;
+    --leather-light:#ddc9a0;
+    --brass:#a97a2e;
+    --brass-bright:#8a5a1e;
+    --brass-dark:#6e4718;
+    --sleeve:rgba(0,0,0,0.035);
+    --sleeve-border:rgba(60,40,20,0.18);
+    --parchment:#fffaf0;
+    --ink:#2a1d14;
+    --ink-dim:#6b5844;
+    --danger:#b0453a;
+    --danger-bright:#96382e;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, var(--leather-light) 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 110%, var(--leather) 0%, transparent 50%),
+      var(--void);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    transition:background .2s ease, color .2s ease;
+  }
+  .brand-title{ font-family:'Cinzel', serif; letter-spacing:0.08em; }
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px 10px;
+    max-width:900px;margin:0 auto;
+  }
+  header h1{
+    font-size:20px;margin:0;font-weight:700;color:var(--brass-bright);
+    text-shadow:0 1px 0 rgba(0,0,0,0.6);
+  }
+  .theme-toggle{
+    background:var(--leather-light);
+    border:1px solid var(--sleeve-border);
+    color:var(--ink);
+    width:34px;height:34px;border-radius:50%;
+    font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  .app-nav{
+    max-width:900px;margin:0 auto;
+    display:flex;gap:8px;justify-content:center;
+    padding:0 18px 14px;
+  }
+  .nav-pill{
+    text-decoration:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;font-weight:600;
+    color:var(--ink-dim);
+    background:rgba(0,0,0,0.18);
+    border:1px solid var(--sleeve-border);
+    padding:6px 16px;border-radius:20px;
+  }
+  html[data-theme="light"] .nav-pill{ background:rgba(0,0,0,0.05); }
+  .nav-pill.active{ color:var(--void); background:var(--brass); border-color:var(--brass); }
+
+  .wrap{ max-width:600px; margin:0 auto; padding:0 16px 50px; }
+
+  /* ---------- Pack stage ---------- */
+  .stage-panel{
+    background:linear-gradient(155deg, var(--leather-light) 0%, var(--leather) 55%, #1f150e 100%);
+    border-radius:18px;
+    border:1px solid #0f0a06;
+    box-shadow:0 20px 40px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    padding:34px 16px;
+    display:flex;flex-direction:column;align-items:center;gap:18px;
+    min-height:380px;
+    justify-content:center;
+  }
+  html[data-theme="light"] .stage-panel{
+    box-shadow:0 20px 40px -12px rgba(60,40,20,0.25), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .pack-stage{ position:relative; width:210px; height:290px; }
+
+  .pack{
+    position:absolute; inset:0;
+    border-radius:16px;
+    background:linear-gradient(135deg, var(--brass-bright) 0%, var(--brass) 35%, var(--brass-dark) 70%, var(--brass) 100%);
+    background-size:220% 220%;
+    box-shadow:0 20px 40px rgba(0,0,0,0.5), inset 0 0 0 3px rgba(0,0,0,0.22);
+    cursor:pointer;
+    animation:foilShimmer 7s ease-in-out infinite;
+  }
+  @keyframes foilShimmer{ 0%,100%{background-position:0% 40%;} 50%{background-position:100% 60%;} }
+  .pack-ribbon{
+    position:absolute; left:0;right:0; top:41%; height:24%;
+    background:linear-gradient(180deg, var(--leather-light), var(--leather));
+    border-top:2px solid rgba(0,0,0,0.3); border-bottom:2px solid rgba(0,0,0,0.3);
+  }
+  .pack-seal{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:62px;height:62px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--brass-bright), var(--brass) 55%, var(--brass-dark) 100%);
+    box-shadow:0 4px 10px rgba(0,0,0,0.4), inset 0 0 0 3px rgba(0,0,0,0.2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px; color:#241a10;
+  }
+  .pack-label{
+    position:absolute; bottom:16px; left:0;right:0; text-align:center;
+    font-family:'Cinzel', serif; font-size:13px; letter-spacing:0.16em;
+    color:#241a10; font-weight:700;
+  }
+  @keyframes packShake{
+    0%,100%{ transform:rotate(0deg); }
+    20%{ transform:rotate(-4deg); } 40%{ transform:rotate(4deg); }
+    60%{ transform:rotate(-3deg); } 80%{ transform:rotate(3deg); }
+  }
+  .pack.shaking{ animation:packShake .48s ease, foilShimmer 7s ease-in-out infinite; }
+  @keyframes packBurst{
+    0%{ transform:scale(1) rotate(0deg); opacity:1; }
+    55%{ transform:scale(1.18) rotate(10deg); opacity:1; }
+    100%{ transform:scale(0.15) rotate(30deg); opacity:0; }
+  }
+  .pack.burst{ animation:packBurst .55s ease-in forwards; }
+
+  .pack-hint{ font-size:12px;color:var(--ink-dim); }
+
+  .reveal-wrap{
+    display:none;flex-direction:column;align-items:center;gap:14px;
+  }
+  .reveal-wrap.show{ display:flex; }
+  @keyframes cardReveal{
+    0%{ transform:rotateY(90deg) scale(0.8); opacity:0; }
+    60%{ transform:rotateY(-8deg) scale(1.04); opacity:1; }
+    100%{ transform:rotateY(0deg) scale(1); opacity:1; }
+  }
+  .reveal-card-img{
+    max-width:200px; border-radius:14px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.6), 0 0 0 5px rgba(232,220,192,0.1);
+    animation:cardReveal .6s ease-out;
+  }
+  .reveal-tag{
+    font-family:'Cinzel', serif; font-size:11px; letter-spacing:0.15em;
+    color:var(--brass-bright);
+  }
+  .reveal-info{ font-size:13px; color:var(--ink-dim); text-align:center; }
+  .reveal-actions{ display:flex; gap:10px; margin-top:4px; }
+
+  .btn{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;font-weight:600;
+    background:var(--leather-light);
+    border:1px solid var(--sleeve-border);
+    color:var(--ink);
+    padding:9px 16px;border-radius:20px;
+    cursor:pointer;white-space:nowrap;
+    text-decoration:none;display:inline-flex;align-items:center;
+  }
+  .btn.gold{ background:var(--brass); color:var(--void); border-color:var(--brass); }
+  .btn.danger{ background:transparent; color:var(--danger-bright); border-color:var(--danger); }
+
+  /* ---------- Pool management ---------- */
+  .pool-section{
+    margin-top:18px;
+    background:var(--sleeve);
+    border:1px solid var(--sleeve-border);
+    border-radius:14px;
+    padding:14px;
+  }
+  .pool-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:12px;flex-wrap:wrap;gap:8px;
+  }
+  .pool-head h3{
+    font-family:'Cinzel', serif;font-size:13px;letter-spacing:0.08em;
+    margin:0;color:var(--brass-bright);
+  }
+  .pool-head .count{ font-size:12px;color:var(--ink-dim); }
+  .pool-actions{ display:flex;gap:8px;flex-wrap:wrap; }
+  .file-label{
+    display:inline-flex;align-items:center;
+    font-size:12.5px;font-weight:600;
+    background:var(--brass);color:var(--void);
+    border:1px solid var(--brass);
+    padding:9px 16px;border-radius:20px;
+    cursor:pointer;
+  }
+  input[type=file]{ display:none; }
+
+  .pool-grid{
+    display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;
+  }
+  .pool-thumb{
+    position:relative;aspect-ratio:5/7;border-radius:8px;overflow:hidden;
+    border:1px solid var(--sleeve-border);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.25);
+  }
+  .pool-thumb img{ width:100%;height:100%;object-fit:cover;display:block; }
+  .pool-thumb .x{
+    position:absolute;top:3px;right:3px;
+    width:18px;height:18px;border-radius:50%;
+    background:rgba(20,12,8,0.75);
+    border:1px solid var(--danger-bright);color:var(--danger-bright);
+    font-size:10px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .empty-hint{ font-size:12.5px;color:var(--ink-dim);opacity:0.75;padding:4px 2px;grid-column:1/-1; }
+
+  @media (max-width:480px){
+    header h1{ font-size:17px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="brand-title">🎁 Buste</h1>
+  <button class="theme-toggle" id="themeToggle" title="Cambia tema">🌙</button>
+</header>
+
+<nav class="app-nav">
+  <a href="./index.html" class="nav-pill">📖 Raccoglitore</a>
+  <a href="./buste.html" class="nav-pill active">🎁 Buste</a>
+  <a href="./statistiche.html" class="nav-pill">📊 Statistiche</a>
+</nav>
+
+<div class="wrap">
+
+  <div class="stage-panel">
+    <div class="pack-stage">
+      <div class="pack" id="packEl">
+        <div class="pack-ribbon"></div>
+        <div class="pack-seal">★</div>
+        <div class="pack-label">APRI</div>
+      </div>
+      <div class="reveal-wrap" id="revealWrap">
+        <div class="reveal-tag">✦ TROVATA ✦</div>
+        <img class="reveal-card-img" id="revealImg" src="" alt="carta estratta">
+        <div class="reveal-info" id="revealInfo"></div>
+        <div class="reveal-actions">
+          <button class="btn gold" id="openAnotherBtn">Apri un'altra busta</button>
+          <a class="btn" href="./index.html">Vai al raccoglitore</a>
+        </div>
+      </div>
+    </div>
+    <div class="pack-hint" id="packHint">Tocca la busta per aprirla</div>
+  </div>
+
+  <div class="pool-section">
+    <div class="pool-head">
+      <h3>Il tuo pacchetto <span class="count" id="poolCount">(0)</span></h3>
+      <div class="pool-actions">
+        <label class="file-label">📷 Aggiungi immagini
+          <input type="file" id="bulkImgInput" accept="image/*" multiple>
+        </label>
+        <button class="btn danger" id="clearPoolBtn">svuota tutto</button>
+      </div>
+    </div>
+    <div class="pool-grid" id="poolGrid"></div>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- IndexedDB (condiviso con il raccoglitore) ---------------- */
+const DB_NAME = 'raccoglitore_db';
+const DB_VERSION = 2;
+const STORE = 'cards';
+const POOL_STORE = 'pack_pool';
+const META_KEY = '__meta__pagecount';
+const SLOTS_PER_PAGE = 9;
+let db;
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE);
+      if(!d.objectStoreNames.contains(POOL_STORE)) d.createObjectStore(POOL_STORE);
+    };
+    req.onsuccess = ()=>{ db = req.result; resolve(db); };
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function dbGet(storeName, key){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readonly');
+    const rq = tx.objectStore(storeName).get(key);
+    rq.onsuccess = ()=> resolve(rq.result || null);
+    rq.onerror = ()=> reject(rq.error);
+  });
+}
+function dbSet(storeName, key, val){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(val, key);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function dbDelete(storeName, key){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(key);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function dbAllKeys(storeName){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readonly');
+    const rq = tx.objectStore(storeName).getAllKeys();
+    rq.onsuccess = ()=> resolve(rq.result);
+    rq.onerror = ()=> reject(rq.error);
+  });
+}
+function dbAllEntries(storeName){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const keysReq = store.getAllKeys();
+    const valsReq = store.getAll();
+    let keys, vals;
+    keysReq.onsuccess = ()=>{ keys = keysReq.result; if(vals) resolve({keys, vals}); };
+    valsReq.onsuccess = ()=>{ vals = valsReq.result; if(keys) resolve({keys, vals}); };
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+
+function slotKey(page, slot){ return page + '-' + slot; }
+function globalSlotNumber(page, slot){ return (page-1)*SLOTS_PER_PAGE + slot + 1; }
+
+function normalizeCard(raw){
+  if(!raw) return null;
+  if(typeof raw === 'string') return { image: raw, nome:'', piattaforma:'', rarita:'', curiosita:'' };
+  return {
+    image: raw.image || '',
+    nome: raw.nome || '', piattaforma: raw.piattaforma || '',
+    rarita: raw.rarita || '', curiosita: raw.curiosita || ''
+  };
+}
+
+async function findNextFreeSlot(){
+  let pageCount = (await dbGet(STORE, META_KEY)) || 1;
+  for(let p=1; p<=pageCount; p++){
+    for(let s=0; s<SLOTS_PER_PAGE; s++){
+      const card = normalizeCard(await dbGet(STORE, slotKey(p, s)));
+      if(!card || !card.image) return { page: p, slot: s };
+    }
+  }
+  pageCount += 1;
+  await dbSet(STORE, META_KEY, pageCount);
+  return { page: pageCount, slot: 0 };
+}
+
+/* ---------------- Compressione immagine (stessa logica del raccoglitore) ---------------- */
+function fileToCompressedDataUrl(file, maxDim=1000, quality=0.86){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = h*maxDim/w; w = maxDim; }
+        else if(h >= w && h > maxDim){ w = w*maxDim/h; h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------- Pool (pacchetto) ---------------- */
+async function refreshPool(){
+  const { keys, vals } = await dbAllEntries(POOL_STORE);
+  document.getElementById('poolCount').textContent = '(' + keys.length + ')';
+  document.getElementById('packHint').textContent = keys.length === 0
+    ? 'Carica qualche immagine qui sotto per iniziare'
+    : 'Tocca la busta per aprirla';
+
+  const grid = document.getElementById('poolGrid');
+  grid.innerHTML = '';
+  if(keys.length === 0){
+    grid.innerHTML = '<div class="empty-hint">Pacchetto vuoto. Carica qualche immagine qui sopra.</div>';
+    return;
+  }
+  keys.forEach((k, i)=>{
+    const div = document.createElement('div');
+    div.className = 'pool-thumb';
+    const img = document.createElement('img');
+    img.src = vals[i];
+    div.appendChild(img);
+    const x = document.createElement('div');
+    x.className = 'x'; x.textContent = '✕';
+    x.onclick = ()=> removePoolItem(k);
+    div.appendChild(x);
+    grid.appendChild(div);
+  });
+}
+
+async function removePoolItem(key){
+  if(!confirm('Rimuovere questa immagine dal pacchetto?')) return;
+  await dbDelete(POOL_STORE, key);
+  await refreshPool();
+}
+
+document.getElementById('clearPoolBtn').onclick = async ()=>{
+  const keys = await dbAllKeys(POOL_STORE);
+  if(keys.length === 0) return;
+  if(!confirm('Svuotare completamente il pacchetto? Questa azione non si può annullare.')) return;
+  for(const k of keys) await dbDelete(POOL_STORE, k);
+  await refreshPool();
+};
+
+document.getElementById('bulkImgInput').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files || []);
+  for(const file of files){
+    const dataUrl = await fileToCompressedDataUrl(file);
+    const key = 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    await dbSet(POOL_STORE, key, dataUrl);
+  }
+  await refreshPool();
+  e.target.value = '';
+});
+
+/* ---------------- Apertura busta ---------------- */
+function wait(ms){ return new Promise(r=> setTimeout(r, ms)); }
+let busy = false;
+
+async function openPack(){
+  if(busy) return;
+  const keys = await dbAllKeys(POOL_STORE);
+  if(keys.length === 0){
+    alert('Il pacchetto è vuoto. Carica qualche immagine prima di aprire una busta.');
+    return;
+  }
+  busy = true;
+  const packEl = document.getElementById('packEl');
+
+  packEl.classList.add('shaking');
+  await wait(480);
+  packEl.classList.remove('shaking');
+  packEl.classList.add('burst');
+  await wait(560);
+
+  const idx = Math.floor(Math.random() * keys.length);
+  const key = keys[idx];
+  const dataUrl = await dbGet(POOL_STORE, key);
+  await dbDelete(POOL_STORE, key);
+
+  const { page, slot } = await findNextFreeSlot();
+  const card = { image: dataUrl, nome:'', piattaforma:'', rarita:'', curiosita:'' };
+  await dbSet(STORE, slotKey(page, slot), card);
+
+  packEl.style.display = 'none';
+  document.getElementById('revealImg').src = dataUrl;
+  document.getElementById('revealInfo').textContent =
+    'Aggiunta all\'album — pagina ' + page + ', slot #' + globalSlotNumber(page, slot);
+  document.getElementById('revealWrap').classList.add('show');
+  localStorage.setItem('jump_to_page', String(page));
+
+  await refreshPool();
+  busy = false;
+}
+document.getElementById('packEl').onclick = openPack;
+
+document.getElementById('openAnotherBtn').onclick = ()=>{
+  document.getElementById('revealWrap').classList.remove('show');
+  const packEl = document.getElementById('packEl');
+  packEl.classList.remove('burst');
+  packEl.style.display = '';
+};
+
+/* ---------------- Theme toggle ---------------- */
+function updateThemeIcon(){
+  document.getElementById('themeToggle').textContent = getTheme() === 'dark' ? '🌙' : '☀️';
+}
+document.getElementById('themeToggle').onclick = ()=>{
+  toggleTheme();
+  updateThemeIcon();
+};
+updateThemeIcon();
+
+/* ---------------- Init ---------------- */
+async function init(){
+  await openDB();
+  await refreshPool();
+}
+init();
+
+/* ---------------- Service worker ---------------- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
