@@ -310,7 +310,6 @@
     margin:0 auto;
   }
   .viewer-inner.expanded .viewer-label,
-  .viewer-inner.expanded .plate,
   .viewer-inner.expanded .viewer-controls{
     display:none;
   }
@@ -329,45 +328,6 @@
   .vbtn.close{ color:var(--danger-bright); border-color:var(--danger); }
   .vbtn.danger{ color:var(--danger-bright); border-color:var(--danger); font-size:17px; }
   .viewer-label{ color:var(--ink-dim); font-size:13px; }
-
-  /* ---------- Card detail plate ---------- */
-  .plate{
-    width:100%;
-    background:var(--parchment);
-    color:#241a10;
-    border-radius:12px;
-    padding:16px 16px 14px;
-    box-shadow:0 10px 26px rgba(0,0,0,0.4);
-  }
-  .plate-field{ margin-bottom:12px; }
-  .plate-field:last-child{ margin-bottom:0; }
-  .plate-field label{
-    display:block;
-    font-family:'Cinzel', serif;
-    font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
-    color:var(--brass-dark);
-    margin-bottom:4px;
-  }
-  .plate-field input, .plate-field textarea{
-    width:100%;
-    background:transparent;
-    border:none;
-    border-bottom:1.5px solid rgba(36,26,16,0.3);
-    font-family:'Space Grotesk', sans-serif;
-    font-size:14px;color:#241a10;
-    padding:4px 2px;
-    outline:none;
-  }
-  .plate-field input:focus, .plate-field textarea:focus{
-    border-bottom-color:var(--brass-dark);
-  }
-  .plate-field textarea{
-    resize:vertical;min-height:52px;border-bottom:none;
-    background:rgba(36,26,16,0.05);
-    border-radius:6px;padding:8px;
-  }
-  .plate-row{ display:flex;gap:12px; }
-  .plate-row .plate-field{ flex:1; }
 
   /* ---------- Sync bar (bottom of side tabs) ---------- */
   .tabs-scroll{
@@ -473,7 +433,6 @@
 <nav class="app-nav">
   <a href="./index.html" class="nav-pill active">📖 Raccoglitore</a>
   <a href="./buste.html" class="nav-pill">🎁 Buste</a>
-  <a href="./statistiche.html" class="nav-pill">📊 Statistiche</a>
 </nav>
 
 <div class="binder-wrap">
@@ -534,26 +493,6 @@
   <div class="viewer-inner" id="viewerInner">
     <img id="viewerImg" src="" alt="carta">
     <div class="viewer-label" id="viewerLabel"></div>
-    <div class="plate">
-      <div class="plate-field">
-        <label>Nome carta</label>
-        <input type="text" id="fNome" placeholder="es. The Legend of Zelda: Breath of the Wild">
-      </div>
-      <div class="plate-row">
-        <div class="plate-field">
-          <label>Piattaforma</label>
-          <input type="text" id="fPiattaforma" placeholder="es. Nintendo Switch">
-        </div>
-        <div class="plate-field">
-          <label>Rarità</label>
-          <input type="text" id="fRarita" placeholder="es. Leggendaria">
-        </div>
-      </div>
-      <div class="plate-field">
-        <label>Curiosità</label>
-        <textarea id="fCuriosita" placeholder="Una curiosità su questo gioco..."></textarea>
-      </div>
-    </div>
     <div class="viewer-controls">
       <div class="vbtn" id="vPrev">‹</div>
       <div class="vbtn" id="vReplace">⭯</div>
@@ -658,18 +597,12 @@ async function init(){
 function slotKey(page, slot){ return page + '-' + slot; }
 function globalSlotNumber(page, slot){ return (page-1)*SLOTS_PER_PAGE + slot + 1; }
 
-// Backward compatible: old entries were plain dataURL strings (image only).
-// New entries are objects: { image, nome, piattaforma, rarita, curiosita }.
+// Una carta e' semplicemente la data URL dell'immagine.
+// Retrocompatibile con vecchie carte salvate come oggetto { image, nome, piattaforma, rarita, curiosita }.
 function normalizeCard(raw){
   if(!raw) return null;
-  if(typeof raw === 'string') return { image: raw, nome:'', piattaforma:'', rarita:'', curiosita:'' };
-  return {
-    image: raw.image || '',
-    nome: raw.nome || '',
-    piattaforma: raw.piattaforma || '',
-    rarita: raw.rarita || '',
-    curiosita: raw.curiosita || ''
-  };
+  if(typeof raw === 'string') return raw;
+  return raw.image || null;
 }
 
 async function renderTabs(){
@@ -743,11 +676,11 @@ async function renderPage(p){
     const card = normalizeCard(raw);
     cache[s] = card;
     const slotEl = document.createElement('div');
-    slotEl.className = 'slot' + (card && card.image ? '' : ' empty');
+    slotEl.className = 'slot' + (card ? '' : ' empty');
     slotEl.dataset.slot = s;
-    if(card && card.image){
+    if(card){
       const img = document.createElement('img');
-      img.src = card.image;
+      img.src = card;
       slotEl.appendChild(img);
       const rm = document.createElement('div');
       rm.className = 'remove-btn';
@@ -775,11 +708,8 @@ document.getElementById('fileInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file || pendingSlot===null) return;
   const dataUrl = await fileToCompressedDataUrl(file);
-  const existing = normalizeCard(await idbGet(slotKey(currentPage, pendingSlot))) ||
-    { image:'', nome:'', piattaforma:'', rarita:'', curiosita:'' };
-  existing.image = dataUrl;
-  await idbSet(slotKey(currentPage, pendingSlot), existing);
-  cache[pendingSlot] = existing;
+  await idbSet(slotKey(currentPage, pendingSlot), dataUrl);
+  cache[pendingSlot] = dataUrl;
   await renderPage(currentPage);
   await updateGlobalCounter();
   e.target.value = '';
@@ -831,54 +761,29 @@ function openViewer(slot){
   document.getElementById('viewer').classList.add('open');
 }
 function showViewerSlot(){
-  const card = cache[viewerIndex] || { image:'', nome:'', piattaforma:'', rarita:'', curiosita:'' };
-  document.getElementById('viewerImg').src = card.image || '';
+  const card = cache[viewerIndex] || '';
+  document.getElementById('viewerImg').src = card || '';
   document.getElementById('viewerLabel').textContent =
     'Carta #' + globalSlotNumber(currentPage, viewerIndex) + ' · pagina ' + currentPage;
-  document.getElementById('fNome').value = card.nome || '';
-  document.getElementById('fPiattaforma').value = card.piattaforma || '';
-  document.getElementById('fRarita').value = card.rarita || '';
-  document.getElementById('fCuriosita').value = card.curiosita || '';
   document.getElementById('viewerInner').classList.remove('expanded');
 }
 document.getElementById('viewerImg').addEventListener('click', (e)=>{
   e.stopPropagation();
   document.getElementById('viewerInner').classList.toggle('expanded');
 });
-async function saveViewerFields(){
-  const card = cache[viewerIndex] || { image:'', nome:'', piattaforma:'', rarita:'', curiosita:'' };
-  card.nome = document.getElementById('fNome').value.trim();
-  card.piattaforma = document.getElementById('fPiattaforma').value.trim();
-  card.rarita = document.getElementById('fRarita').value.trim();
-  card.curiosita = document.getElementById('fCuriosita').value.trim();
-  cache[viewerIndex] = card;
-  if(card.image){
-    await idbSet(slotKey(currentPage, viewerIndex), card);
-  }
-}
-['fNome','fPiattaforma','fRarita','fCuriosita'].forEach(id=>{
-  document.getElementById(id).addEventListener('blur', saveViewerFields);
-});
 function closeViewer(){
   document.getElementById('viewer').classList.remove('open');
 }
-async function closeViewerAndSave(){
-  await saveViewerFields();
-  closeViewer();
-}
-document.getElementById('vClose').onclick = closeViewerAndSave;
-document.getElementById('vPrev').onclick = async ()=>{
-  await saveViewerFields();
+document.getElementById('vClose').onclick = closeViewer;
+document.getElementById('vPrev').onclick = ()=>{
   viewerIndex = (viewerIndex - 1 + SLOTS_PER_PAGE) % SLOTS_PER_PAGE;
   showViewerSlot();
 };
-document.getElementById('vNext').onclick = async ()=>{
-  await saveViewerFields();
+document.getElementById('vNext').onclick = ()=>{
   viewerIndex = (viewerIndex + 1) % SLOTS_PER_PAGE;
   showViewerSlot();
 };
-document.getElementById('vReplace').onclick = async ()=>{
-  await saveViewerFields();
+document.getElementById('vReplace').onclick = ()=>{
   closeViewer();
   triggerUpload(viewerIndex);
 };
@@ -893,11 +798,9 @@ function poolAddImage(dataUrl){
 }
 
 function openRetireModal(){
-  const card = cache[viewerIndex];
   const num = globalSlotNumber(currentPage, viewerIndex);
-  const nome = card && card.nome ? ' ("' + card.nome + '")' : '';
   document.getElementById('retireModalText').textContent =
-    'Carta #' + num + nome + '. Vuoi eliminarla per sempre oppure rimetterla tra le carte pescabili nella pagina Buste?';
+    'Carta #' + num + '. Vuoi eliminarla per sempre oppure rimetterla tra le carte pescabili nella pagina Buste?';
   document.getElementById('retireModal').classList.add('open');
 }
 function closeRetireModal(){
@@ -915,8 +818,8 @@ document.getElementById('retireForeverBtn').onclick = async ()=>{
 };
 document.getElementById('retireToPoolBtn').onclick = async ()=>{
   const card = cache[viewerIndex];
-  if(card && card.image){
-    await poolAddImage(card.image);
+  if(card){
+    await poolAddImage(card);
   }
   closeRetireModal();
   await idbDelete(slotKey(currentPage, viewerIndex));
@@ -926,7 +829,7 @@ document.getElementById('retireToPoolBtn').onclick = async ()=>{
   await updateGlobalCounter();
 };
 document.getElementById('viewer').addEventListener('click', (e)=>{
-  if(e.target.id === 'viewer') closeViewerAndSave();
+  if(e.target.id === 'viewer') closeViewer();
 });
 
 /* ---------------- Nav buttons ---------------- */

@@ -286,7 +286,6 @@
 <nav class="app-nav">
   <a href="./index.html" class="nav-pill">📖 Raccoglitore</a>
   <a href="./buste.html" class="nav-pill active">🎁 Buste</a>
-  <a href="./statistiche.html" class="nav-pill">📊 Statistiche</a>
 </nav>
 
 <div class="wrap">
@@ -319,6 +318,7 @@
         <label class="file-label">📷 Aggiungi immagini
           <input type="file" id="bulkImgInput" accept="image/*" multiple>
         </label>
+        <button class="btn" id="importLibraryBtn">📥 Importa libreria giochi</button>
         <button class="btn" id="toggleHideBtn">🙈 Nascondi</button>
         <button class="btn danger" id="clearPoolBtn">svuota tutto</button>
       </div>
@@ -421,14 +421,12 @@ function dbAllEntries(storeName){
 function slotKey(page, slot){ return page + '-' + slot; }
 function globalSlotNumber(page, slot){ return (page-1)*SLOTS_PER_PAGE + slot + 1; }
 
+// Una carta e' semplicemente la data URL dell'immagine.
+// Retrocompatibile con vecchie carte salvate come oggetto { image, nome, piattaforma, rarita, curiosita }.
 function normalizeCard(raw){
   if(!raw) return null;
-  if(typeof raw === 'string') return { image: raw, nome:'', piattaforma:'', rarita:'', curiosita:'' };
-  return {
-    image: raw.image || '',
-    nome: raw.nome || '', piattaforma: raw.piattaforma || '',
-    rarita: raw.rarita || '', curiosita: raw.curiosita || ''
-  };
+  if(typeof raw === 'string') return raw;
+  return raw.image || null;
 }
 
 async function findNextFreeSlot(){
@@ -436,7 +434,7 @@ async function findNextFreeSlot(){
   for(let p=1; p<=pageCount; p++){
     for(let s=0; s<SLOTS_PER_PAGE; s++){
       const card = normalizeCard(await dbGet(STORE, slotKey(p, s)));
-      if(!card || !card.image) return { page: p, slot: s };
+      if(!card) return { page: p, slot: s };
     }
   }
   pageCount += 1;
@@ -486,7 +484,7 @@ async function refreshPool(){
   document.getElementById('poolCount').textContent = '(' + keys.length + ')';
   document.getElementById('packHint').textContent = keys.length === 0
     ? 'Carica qualche immagine qui sotto per iniziare'
-    : 'Tocca la busta per aprirla — escono 3 carte';
+    : 'Tocca la busta per aprirla — escono 5 carte';
 
   const grid = document.getElementById('poolGrid');
   grid.innerHTML = '';
@@ -527,16 +525,65 @@ document.getElementById('clearPoolBtn').onclick = async ()=>{
   await refreshPool();
 };
 
+async function addImageToPool(dataUrl){
+  const key = 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  await dbSet(POOL_STORE, key, dataUrl);
+}
+
 document.getElementById('bulkImgInput').addEventListener('change', async (e)=>{
   const files = Array.from(e.target.files || []);
   for(const file of files){
     const dataUrl = await fileToCompressedDataUrl(file);
-    const key = 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    await dbSet(POOL_STORE, key, dataUrl);
+    await addImageToPool(dataUrl);
   }
   await refreshPool();
   e.target.value = '';
 });
+
+/* ---------------- Import libreria giochi da BoardGameGeek (giochi_import.json) ---------------- */
+const IMPORTED_BGG_IDS_KEY = 'imported_bgg_ids';
+
+function getImportedBggIds(){
+  try{
+    return new Set(JSON.parse(localStorage.getItem(IMPORTED_BGG_IDS_KEY) || '[]'));
+  }catch(err){
+    return new Set();
+  }
+}
+function saveImportedBggIds(idSet){
+  localStorage.setItem(IMPORTED_BGG_IDS_KEY, JSON.stringify(Array.from(idSet)));
+}
+
+document.getElementById('importLibraryBtn').onclick = async ()=>{
+  let data;
+  try{
+    const res = await fetch('./giochi_import.json');
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+  }catch(err){
+    alert('Impossibile caricare giochi_import.json (file non presente, oppure la pagina è aperta senza un server locale). Nessuna carta è stata importata.');
+    return;
+  }
+  const games = Array.isArray(data.games) ? data.games : [];
+  if(games.length === 0){
+    alert('Il file giochi_import.json non contiene giochi da importare.');
+    return;
+  }
+  const importedIds = getImportedBggIds();
+  let added = 0;
+  for(const g of games){
+    if(!g || !g.image) continue;
+    if(g.bgg_id != null && importedIds.has(g.bgg_id)) continue;
+    await addImageToPool(g.image);
+    if(g.bgg_id != null) importedIds.add(g.bgg_id);
+    added++;
+  }
+  saveImportedBggIds(importedIds);
+  await refreshPool();
+  alert(added > 0
+    ? 'Importazione completata: ' + added + ' immagini aggiunte al pacchetto.'
+    : 'Nessuna nuova immagine da importare (già tutte presenti nel pacchetto in precedenza).');
+};
 
 /* ---------------- Cronologia (carte uscite) ---------------- */
 async function refreshHistory(){
@@ -587,7 +634,7 @@ document.getElementById('clearHistoryBtn').onclick = async ()=>{
 
 /* ---------------- Apertura busta ---------------- */
 function wait(ms){ return new Promise(r=> setTimeout(r, ms)); }
-const CARDS_PER_PACK = 3;
+const CARDS_PER_PACK = 5;
 let busy = false;
 let revealQueue = [];
 let revealIdx = 0;
@@ -621,8 +668,7 @@ async function openPack(){
     await dbDelete(POOL_STORE, key);
 
     const { page, slot } = await findNextFreeSlot();
-    const card = { image: dataUrl, nome:'', piattaforma:'', rarita:'', curiosita:'' };
-    await dbSet(STORE, slotKey(page, slot), card);
+    await dbSet(STORE, slotKey(page, slot), dataUrl);
 
     const histKey = 'h' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     await dbSet(HISTORY_STORE, histKey, { image: dataUrl, page, slot, ts: Date.now() });

@@ -1,5 +1,5 @@
-const CACHE = 'raccoglitore-v1';
-const ASSETS = ['./', './index.html', './buste.html', './statistiche.html', './manifest.json', './theme.js', './icon-192.png', './icon-512.png'];
+const CACHE = 'raccoglitore-v2';
+const ASSETS = ['./', './index.html', './buste.html', './manifest.json', './theme.js', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
