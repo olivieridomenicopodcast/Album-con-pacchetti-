@@ -319,6 +319,7 @@
           <input type="file" id="bulkImgInput" accept="image/*" multiple>
         </label>
         <button class="btn" id="importLibraryBtn">📥 Importa libreria giochi</button>
+        <button class="btn danger" id="resetAllBtn">🔄 Ricomincia da capo</button>
         <button class="btn" id="toggleHideBtn">🙈 Nascondi</button>
         <button class="btn danger" id="clearPoolBtn">svuota tutto</button>
       </div>
@@ -393,6 +394,14 @@ function dbDelete(storeName, key){
   return new Promise((resolve, reject)=>{
     const tx = db.transaction(storeName, 'readwrite');
     tx.objectStore(storeName).delete(key);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function dbClear(storeName){
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).clear();
     tx.oncomplete = ()=> resolve();
     tx.onerror = ()=> reject(tx.error);
   });
@@ -583,6 +592,43 @@ document.getElementById('importLibraryBtn').onclick = async ()=>{
   alert(added > 0
     ? 'Importazione completata: ' + added + ' immagini aggiunte al pacchetto.'
     : 'Nessuna nuova immagine da importare (già tutte presenti nel pacchetto in precedenza).');
+};
+
+/* ---------------- Ricomincia da capo (reset completo) ---------------- */
+document.getElementById('resetAllBtn').onclick = async ()=>{
+  const confirmMsg = 'Questo cancellerà TUTTO il raccoglitore, la cronologia delle carte uscite e il pacchetto pescabile attuale, poi ricaricherà da zero tutte le copertine da giochi_import.json. Questa azione non si può annullare. Sei sicuro?';
+  if(!confirm(confirmMsg)) return;
+
+  await dbClear(STORE);
+  await dbClear(HISTORY_STORE);
+  await dbClear(POOL_STORE);
+  localStorage.removeItem(IMPORTED_BGG_IDS_KEY);
+
+  let added = 0;
+  let loadError = null;
+  try{
+    const res = await fetch('./giochi_import.json');
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const games = Array.isArray(data.games) ? data.games : [];
+    const importedIds = new Set();
+    for(const g of games){
+      if(!g || !g.image) continue;
+      await addImageToPool(g.image);
+      if(g.bgg_id != null) importedIds.add(g.bgg_id);
+      added++;
+    }
+    saveImportedBggIds(importedIds);
+  }catch(err){
+    loadError = err;
+  }
+
+  await refreshPool();
+  await refreshHistory();
+
+  alert(loadError
+    ? 'Raccoglitore, cronologia e pacchetto svuotati, ma non è stato possibile ricaricare giochi_import.json (' + loadError.message + ').'
+    : 'Ricominciato da capo: raccoglitore e cronologia svuotati, ' + added + ' copertine ricaricate nel pacchetto.');
 };
 
 /* ---------------- Cronologia (carte uscite) ---------------- */
