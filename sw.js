@@ -1,4 +1,4 @@
-const CACHE = 'raccoglitore-v2';
+const CACHE = 'raccoglitore-v3';
 const ASSETS = ['./', './index.html', './buste.html', './manifest.json', './theme.js', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
